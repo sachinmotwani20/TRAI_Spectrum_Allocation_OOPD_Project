@@ -1,6 +1,6 @@
 # OOPD_Project
 
-This is a repository containing files for OOPD Assignment 2.
+This is a repository containing files for OOPD Project.
 
 Command to run the program without MakeFile: 
 ```
