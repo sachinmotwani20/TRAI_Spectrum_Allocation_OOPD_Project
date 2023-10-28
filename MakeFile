@@ -3,9 +3,10 @@ CXXFLAGS_DEBUG = -Wall -g
 CXXFLAGS_OPTIMIZE = -O2
 
 # Source files
-SOURCES = main.cpp functions.cpp classes.cpp
+MAIN_SOURCES = main.cpp functions.cpp classes.cpp
+OPERATORS_SOURCES = operators.cpp functions.cpp classes.cpp
 
-# Header files
+# Common header files
 HEADERS = functions.h classes.h
 
 # Output directories
@@ -13,26 +14,38 @@ OUTPUT_DIR_DEBUG = debug
 OUTPUT_DIR_OPTIMIZE = optimize
 
 # Output filenames
-OUTPUT_DEBUG = $(OUTPUT_DIR_DEBUG)/main_debug
-OUTPUT_OPTIMIZE = $(OUTPUT_DIR_OPTIMIZE)/main_optimized
+MAIN_OUTPUT_DEBUG = $(OUTPUT_DIR_DEBUG)/main_debug
+MAIN_OUTPUT_OPTIMIZE = $(OUTPUT_DIR_OPTIMIZE)/main_optimized
+OPERATORS_OUTPUT_DEBUG = $(OUTPUT_DIR_DEBUG)/operators_debug
+OPERATORS_OUTPUT_OPTIMIZE = $(OUTPUT_DIR_OPTIMIZE)/operators_optimized
 
 .PHONY: all debug optimize clean
 
 all: debug optimize
 
-debug: $(OUTPUT_DEBUG)
+debug: $(MAIN_OUTPUT_DEBUG) $(OPERATORS_OUTPUT_DEBUG)
 
-optimize: $(OUTPUT_OPTIMIZE)
+optimize: $(MAIN_OUTPUT_OPTIMIZE) $(OPERATORS_OUTPUT_OPTIMIZE)
 
-# Debug target
-$(OUTPUT_DEBUG): $(SOURCES) $(HEADERS)
+# Debug target for main.cpp
+$(MAIN_OUTPUT_DEBUG): $(MAIN_SOURCES) $(HEADERS)
 	@if not exist $(OUTPUT_DIR_DEBUG) mkdir $(OUTPUT_DIR_DEBUG)
-	$(CXX) $(CXXFLAGS_DEBUG) $(SOURCES) -o $@
+	$(CXX) $(CXXFLAGS_DEBUG) $(MAIN_SOURCES) -o $@
 
-# Optimized target
-$(OUTPUT_OPTIMIZE): $(SOURCES) $(HEADERS)
+# Optimized target for main.cpp
+$(MAIN_OUTPUT_OPTIMIZE): $(MAIN_SOURCES) $(HEADERS)
 	@if not exist $(OUTPUT_DIR_OPTIMIZE) mkdir $(OUTPUT_DIR_OPTIMIZE)
-	$(CXX) $(CXXFLAGS_OPTIMIZE) $(SOURCES) -o $@
+	$(CXX) $(CXXFLAGS_OPTIMIZE) $(MAIN_SOURCES) -o $@
+
+# Debug target for operators.cpp
+$(OPERATORS_OUTPUT_DEBUG): $(OPERATORS_SOURCES) $(HEADERS)
+	@if not exist $(OUTPUT_DIR_DEBUG) mkdir $(OUTPUT_DIR_DEBUG)
+	$(CXX) $(CXXFLAGS_DEBUG) $(OPERATORS_SOURCES) -o $@
+
+# Optimized target for operators.cpp
+$(OPERATORS_OUTPUT_OPTIMIZE): $(OPERATORS_SOURCES) $(HEADERS)
+	@if not exist $(OUTPUT_DIR_OPTIMIZE) mkdir $(OUTPUT_DIR_OPTIMIZE)
+	$(CXX) $(CXXFLAGS_OPTIMIZE) $(OPERATORS_SOURCES) -o $@
 
 clean:
 	rm -rf $(OUTPUT_DIR_DEBUG) $(OUTPUT_DIR_OPTIMIZE)

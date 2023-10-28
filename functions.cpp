@@ -10,8 +10,7 @@
 #include <windows.h> //To use Sleep() in windows 
 #include <cstdlib> //To use random number generator
 #include <filesystem> //To use filesystem [system - > Create Folder]
-#include <set> //To use set <string>
-
+#include <ctime> //To use time() for random number generator
 
 using namespace std;
 
@@ -93,24 +92,24 @@ void Clear_Spectrum_Range(string Path_Spectrum_Range, string Path_Output_File){
     getline(input_file, line);
     output_file << line << endl;
 
-    // Keep track of allocated spectrum ranges
-    set<string> allocated_ranges;
+    // Keep track of existing company, spectrum range, and circle combinations
+    string existing_combinations = "";
 
     // Process each line in input file
     while (getline(input_file, line)) {
         // Parse line into fields
         stringstream ss(line);
-        string date, company, spectrum_range, circle, revenue;
+        string date, company, spectrum_range, circle, revenue, spectrum_size;
         getline(ss, date, ',');
         getline(ss, company, ',');
         getline(ss, spectrum_range, ',');
         getline(ss, circle, ',');
         getline(ss, revenue, ',');
-        
-        // Check if spectrum range has already been allocated
-        if (allocated_ranges.count(circle + spectrum_range) == 0) {
+
+        // Check if company, spectrum range, and circle combination already exists
+        if (existing_combinations.find(company + spectrum_range + circle) == string::npos) {
             output_file << line << endl; // Write row to output file
-            allocated_ranges.insert(circle + spectrum_range); // Add spectrum range to set of allocated ranges
+            existing_combinations += company + spectrum_range + circle; // Add combination to string of existing combinations
         }
     }
 
@@ -142,7 +141,7 @@ void Clear_Subscribers(string Path_Subscribers, string Path_Output_File){
     output_file << line << endl;
 
     // Keep track of existing company and location combinations
-    set<string> existing_combinations;
+    string existing_combinations;
 
     // Process each line in input file
     while (getline(input_file, line)) {
@@ -155,9 +154,9 @@ void Clear_Subscribers(string Path_Subscribers, string Path_Output_File){
         getline(ss, subscribers, ',');
 
         // Check if company and location combination already exists
-        if (existing_combinations.count(company + location) == 0) {
+        if (existing_combinations.find(company + location) == string::npos) {
             output_file << line << endl; // Write row to output file
-            existing_combinations.insert(company + location); // Add combination to set of existing combinations
+            existing_combinations += company + location; // Add combination to string of existing combinations
         }
     }
 
@@ -188,8 +187,8 @@ void Clear_Spectrum_Requests(string Path_Spectrum_Requests, string Path_Output_F
     getline(input_file, line);
     output_file << line << endl;
 
-    // Keep track of existing company, location, and request combinations
-    set<string> existing_combinations;
+    // Keep track of existing company, location, and spectrum_request combinations
+    string existing_combinations;
 
     // Process each line in input file
     while (getline(input_file, line)) {
@@ -202,9 +201,9 @@ void Clear_Spectrum_Requests(string Path_Spectrum_Requests, string Path_Output_F
         getline(ss, request, ',');
 
         // Check if company, location, and request combination already exists
-        if (existing_combinations.count(company + location + request) == 0) {
+        if (existing_combinations.find(company + location + request) == string::npos) {
             output_file << line << endl; // Write row to output file
-            existing_combinations.insert(company + location + request); // Add combination to set of existing combinations
+            existing_combinations += company + location + request; // Add combination to string of existing combinations
         }
         
     }
@@ -212,6 +211,104 @@ void Clear_Spectrum_Requests(string Path_Spectrum_Requests, string Path_Output_F
     // Close files
     input_file.close();
     output_file.close();
+}
+
+bool Check_Valid_HashCode(string MVNO_Comp, string hash_code, string path_login_file){
+    ifstream file(path_login_file);
+    string line;
+    while(getline(file, line)){
+        stringstream ss(line);        
+        string user_type, user_id, password, hash_code_in_file;
+        getline(ss, user_type, ',');
+        getline(ss, user_id, ',');
+        getline(ss, password, ',');
+        getline(ss, hash_code_in_file, ',');
+
+        if (user_type == "MVN" && user_id == MVNO_Comp && hash_code_in_file == hash_code) {
+            return true;
+        }
+    }
+    file.close();
+    return false;
+
+}
+
+int Generate_Hash_Code(int seed){
+    //Generate a 4-digit random number
+    srand(time(0)+seed);
+    int random_number = rand() % 10000 + seed;
+    return random_number;
+}
+
+
+
+void Generate_HashCode_in_LoginFile(string path_to_file){
+    ifstream file(path_to_file);
+    string line;
+    getline(file, line);
+
+    if (line.find("HashCode") != string::npos) {
+        file.close();
+        return;
+    }
+    else {
+        // Restart file pointer
+        file.clear();
+        file.seekg(0, ios::beg);
+
+        // Generate ouput file
+        string output_path = "Data_Modified/temp.csv";
+        ofstream output_file(output_path);
+        if (!output_file.is_open()) {
+            cout << "Error creating output file." << endl;
+            file.close();
+            return;
+        }
+
+        if (!file.is_open()) {
+            cout << "Error opening file: "<< path_to_file << endl;
+            return;
+        }
+
+        string line;
+        getline(file, line); //Skip the first line
+        output_file << line << ",HashCode" << endl; //Write the first line to the output file
+
+        int flag = 0;
+        while(getline(file, line)){
+            stringstream ss(line);        
+            string user_type, user_id, password;
+            getline(ss, user_type, ',');
+            getline(ss, user_id, ',');
+            getline(ss, password, ',');
+
+            if (user_type == "LTO") {
+                output_file << line << "," << "N/A" << endl;
+            } else {
+                output_file << line << "," << Generate_Hash_Code(++flag) << endl;
+            }
+        }
+        file.close();
+        output_file.close();
+
+        //Delete the original file and rename the output file to the original file name
+        remove(path_to_file.c_str());
+        rename(output_path.c_str(), path_to_file.c_str());
+    }
+
+    file.close();
+
+
+}
+
+void Print_Login_Credentials(){
+    ifstream file("Data_Modified/Login_Credentials.csv");
+    string line;
+    while(getline(file, line)){
+        stringstream ss(line);      
+        cout << line << endl;        
+    }
+    file.close();    
 }
 
 int Count_Rows(string path_to_file){
@@ -323,10 +420,162 @@ string Util_Get_List_Of_Unique_Bidders(string path_to_spectrum_requests_file){
     }
     file.close();
     bidder_unique_list = bidder_unique_list.substr(0, bidder_unique_list.size() - 2); //Remove the last comma and space
-    return bidder_unique_list;
+   
+    int size = bidder_unique_list.size();
+
+   //Remove spaces from bidder_unique_list
+    for (int i = 0; i < size; i++) {
+        if (bidder_unique_list[i] == ' ') {
+            bidder_unique_list.erase(i, 1);
+        }
+    }
+
+   return bidder_unique_list;
 }
 
-string Get_Valid_Circle(string cir_uni_lis){
+string Util_Get_Random_LTO( string unique_bidders_list, int seed){
+    //Randomly return one bidder from the provided comma separated string without using vector or set
+    if (unique_bidders_list == "") {
+        cout << "Error: No bidders available." << endl;
+        return "Error";
+    }
+    
+    // Count the number of bidders
+    int bidderCount = 1;
+    for (char c : unique_bidders_list) {
+        if (c == ',') {
+            bidderCount++;
+        }
+    }
+    
+    // Generate a random number between 0 and bidderCount - 1
+    srand(time(0) + seed);
+    int randomIndex = rand() % bidderCount;
+
+    // Find the bidder at the random index
+    int currentIndex = 0;
+    string bidder = "";
+    for (char c : unique_bidders_list) { 
+        if (c == ',') {
+            currentIndex++;
+        } else if (currentIndex == randomIndex) {
+            bidder += c;
+        }
+    }
+
+    return bidder;    
+}
+
+string Find_Corresponding_HashCode(string company, string path_to_file){
+    ifstream file(path_to_file);
+    string line;
+    getline(file, line); //Skip the first line
+    while(getline(file, line)){
+        stringstream ss(line);        
+        string user_type, user_id, password, hash_code;
+        getline(ss, user_type, ',');
+        getline(ss, user_id, ',');
+        getline(ss, password, ',');
+        getline(ss, hash_code, ',');
+
+        if (user_type == "MVN" && user_id == company) {
+            return hash_code;
+        }
+    }
+    file.close();
+    return "Error";
+}
+
+void Clear_MVNOSpectrum(string path_to_MVNO_file, string path_to_output_file_without_LTO,string path_to_output_file, string unique_bidders_list){
+    // Open file
+    ifstream input_file(path_to_MVNO_file);
+    if (!input_file.is_open()) {
+        cout << "Error opening input file." << endl;
+        return;
+    }
+
+    // Create output file
+    string output_path = path_to_output_file_without_LTO;
+    ofstream output_file(output_path);
+    if (!output_file.is_open()) {
+        cout << "Error creating output file." << endl;
+        input_file.close();
+        return;
+    }
+
+    // Copy column headers to output file
+    string line;
+    getline(input_file, line);
+    output_file << line << endl;
+
+    // Keep track of existing company, spectrum range, and circle combinations
+    string existing_combinations = "";
+
+    // Process each line in input file
+    while (getline(input_file, line)) {
+        // Parse line into fields
+        stringstream ss(line);
+        string date, company, circle, requested_spectrum_range;
+        getline(ss, date, ',');
+        getline(ss, company, ',');
+        getline(ss, circle, ',');
+        getline(ss, requested_spectrum_range, ',');
+        // Check if company, spectrum range, and circle combination already exists then don't add the line to the file
+        if (existing_combinations.find(company + requested_spectrum_range + circle) == string::npos) {
+            output_file << line << endl; // Write row to output file
+            existing_combinations += company + requested_spectrum_range + circle; // Add combination to string of existing combinations
+        }   
+    }
+
+    // Close files
+    input_file.close();
+    output_file.close();
+
+    //To_do Add a new column 'TelecomOperator' to the output file and randomly add one telecom operator for each row
+    ifstream input_file2(path_to_output_file_without_LTO);
+    if (!input_file2.is_open()) {
+        cout << "Error opening input file." << endl;
+        return;
+    }
+
+    // Create output file
+    string output_path2 = path_to_output_file;
+    ofstream output_file2(output_path2);
+    if (!output_file2.is_open()) {
+        cout << "Error creating output file." << endl;
+        input_file2.close();
+        return;
+    }
+
+    // Copy column headers to output file
+    string line2;
+    getline(input_file2, line2);
+    output_file2 << line2 << ",TelecomOperator,HashCode,Decision" << endl;
+
+    // Process each line in input file
+    int flag = 50;
+    while (getline(input_file2, line2)) {
+        // Parse line into fields
+        stringstream ss(line2);
+        string date, company, circle, requested_spectrum_range;
+        getline(ss, date, ',');
+        getline(ss, company, ',');
+        getline(ss, circle, ',');
+        getline(ss, requested_spectrum_range, ',');
+
+        string Tel_Operator = Util_Get_Random_LTO(unique_bidders_list, ++flag);
+        string HashCode = Find_Corresponding_HashCode(company, "Data_Modified/Login_Credentials.csv");
+
+        output_file2 << line2 << "," << Tel_Operator << "," << HashCode << ",Pending"<<endl; // Write row to output file    
+    }
+
+    // Close files
+    input_file2.close();
+    output_file2.close();
+    
+}
+
+string Get_Valid_Circle(string cir_uni_lis="Patna,Lucknow,Kolkata,Jaipur,Delhi,Chandigarh"){
     string circle;
     while (true) {
         cout << "Circle: ";
@@ -341,6 +590,106 @@ string Get_Valid_Circle(string cir_uni_lis){
     }
 }
 
+string Get_Valid_Spectrum_Range(){
+    string Spectrum_Range;
+    while (true){
+        cout<< "Spectrum Range: ";
+        getline(cin, Spectrum_Range);
+
+        //Spectrum range must be an integer between 1 and 9999 
+        if (Is_Valid_Choice(Spectrum_Range, 1, 9999)){
+            return Spectrum_Range;
+        }
+        else{
+            cout<<"Invalid input. Please enter a valid spectrum range."<<endl;
+        }
+    }
+}
+
+string Get_Valid_Operator(string unique_operator_list){
+    string Operator;
+    while (true){
+        cout<< "Operator: ";
+        getline(cin, Operator);
+
+        //Operator must be from the list of unique operators
+        if (unique_operator_list.find(Operator) != string::npos){
+            return Operator;
+        }
+        else{
+            cout<<"Invalid input. Please enter a valid operator from the list only."<<endl;
+            cout<<"List of valid operators: "<<unique_operator_list<<endl;
+        }
+    }
+}
+
+string Get_Valid_Hashcode(){
+    string Hashcode;
+    while (true){
+        cout<< "Hashcode: ";
+        getline(cin, Hashcode);
+
+        //Hashcode must be an integer between 1000 and 9999 
+        if (Is_Valid_Choice(Hashcode, 1000, 9999)){
+            return Hashcode;
+        }
+        else{
+            cout<<"Invalid input. Please enter a valid hashcode."<<endl;
+        }
+    }
+}
+
+bool Check_Valid_Spectrum_Range (string LTOperator, string Spectrum_Range, string path_to_spectrum_range_file){
+    ifstream file(path_to_spectrum_range_file);
+    string line;
+    while(getline(file, line)){
+        stringstream ss(line);        
+        string date, company, spectrum_range, circle, revenue, spectrum_size;
+        getline(ss, date, ',');
+        getline(ss, company, ',');
+        getline(ss, spectrum_range, ',');
+        getline(ss, circle, ',');
+        getline(ss, revenue, ',');
+        getline(ss, spectrum_size, ',');
+
+        //Remove ' MHz' from the end of "spectrum_range"
+        spectrum_range = spectrum_range.substr(0, spectrum_range.size() - 4);
+
+        cout << "In file: " << spectrum_range<<endl;
+        cout << "In function: " << Spectrum_Range << endl;
+
+
+        if (company == LTOperator && spectrum_range == Spectrum_Range) {
+            return true;
+        }
+
+    }
+
+    file.close();
+    cout<<"Invalid spectrum range: "<< Spectrum_Range <<endl;
+    return false;    
+}
+
+string Get_Subscribers(string LTOperator, string Circle, string path_to_subscribers_file){
+    ifstream file(path_to_subscribers_file);
+    string line;
+    while(getline(file, line)){
+        stringstream ss(line);        
+        string date, company, circle, subscribers;
+        getline(ss, date, ',');
+        getline(ss, company, ',');
+        getline(ss, circle, ',');
+        getline(ss, subscribers, ',');
+
+        if (company == LTOperator && circle == Circle) {
+            return subscribers;
+        }
+
+    }
+
+    file.close();
+    return "Error";    
+}
 
 bool Has_Usage_Density (float density){
     float threshold = 0.0037;  //Mean of usage density = 0.003722
@@ -579,6 +928,17 @@ void Print_Revenue_Report(){
         cout << line << endl;        
     }
     file.close();
+}
+
+string Get_Current_Date(){
+    //Get current data in the format MM-YY
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    string month = to_string(1 + ltm->tm_mon);
+    string year = to_string(1900 + ltm->tm_year);
+    year = year.substr(2,2); //Last two digit of year
+    string current_date = month + "-" + year;
+    return current_date;
 }
 
 void Exit_Protocol(){

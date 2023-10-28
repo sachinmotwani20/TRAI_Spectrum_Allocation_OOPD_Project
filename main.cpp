@@ -19,7 +19,7 @@ using namespace std;
 string Path_Spectrum_Range_raw = "Data/spectrumRange.csv"; //SRa
 string Path_Subscribers_raw = "Data/subscribers.csv"; //S
 string Path_Spectrum_Requests_raw = "Data/spectrumRequest.csv"; //SRe
-string Path_MVNO_Spectrum = "Data/MVNOSpectrum.csv"; //M
+string Path_MVNO_Spectrum_raw = "Data/MVNOSpectrum.csv"; //M
 
 //Output Files
 string Path_Decision_Report = "Data_Modified/Decision_Report.csv"; 
@@ -27,7 +27,7 @@ string Path_Revenue_Report = "Data_Modified/Revenue_Report.csv";
 
 int main(){
         //Variable declarations
-        int choice=1, start=1, stop=8;
+        int choice=1, start=1, stop=9;
 
         Welcome();
 
@@ -35,16 +35,22 @@ int main(){
         string Path_Spectrum_Range_Without_Size = "Data_Modified/cleaned_spectrum_range.csv";
         string Path_Subscribers = "Data_Modified/cleaned_subscribers.csv";
         string Path_Spectrum_Requests = "Data_Modified/cleaned_spectrum_requests.csv";
+        string Path_MVNO_Spectrum_without_operator = "Data_Modified/cleaned_MVNOSpectrum.csv";
+        string Path_MVNO_Spectrum = "Data_Modified/cleaned_MVNO_Spectrum_operator_added.csv";
+        string Path_Login_File = "Data_Modified/Login_Credentials.csv";
 
         Clear_Spectrum_Range(Path_Spectrum_Range_raw, Path_Spectrum_Range_Without_Size); //Removing Redundant Entries
         Clear_Subscribers(Path_Subscribers_raw, Path_Subscribers); //Removing Redundant Entries
         Clear_Spectrum_Requests(Path_Spectrum_Requests_raw, Path_Spectrum_Requests); //Removing Redundant Entries
+        Generate_HashCode_in_LoginFile(Path_Login_File); //Generating Hash Code for MVNOs in Login File
 
         string Path_Spectrum_Range = "Data_Modified/updated_cleaned_spectrum_range.csv";
         Util_Add_SpectrumSize_to_Spectrum_Range(Path_Spectrum_Range_Without_Size, Path_Spectrum_Range);
 
         string list_of_unique_circles = Util_Get_List_Of_Unique_Circles(Path_Spectrum_Range);
         string list_of_unique_bidders = Util_Get_List_Of_Unique_Bidders(Path_Spectrum_Range);
+
+        Clear_MVNOSpectrum(Path_MVNO_Spectrum_raw, Path_MVNO_Spectrum_without_operator, Path_MVNO_Spectrum, list_of_unique_bidders); //Removing Redundant Entries, Adding Telecom Operator Names (who are requested for Spectrum), Hashcode and Decision
 
         do {
 
@@ -111,12 +117,16 @@ int main(){
                 i = 0;
                 while(getline(file_M, line)){
                         stringstream ss(line);
-                        string date, MVNOcompany, location, request;
+                        string date, MVNOcompany, location, request, operator_name, hashcode, decision;
                         getline(ss, date, ',');
                         getline(ss, MVNOcompany, ',');
                         getline(ss, location, ',');
                         getline(ss, request, ',');
-                        MVNO_Spectrum record_M(date, MVNOcompany, location, request);
+                        getline(ss, operator_name, ',');
+                        getline(ss, hashcode, ',');
+                        getline(ss, decision, ',');                       
+
+                        MVNO_Spectrum record_M(date, MVNOcompany, location, request, operator_name, hashcode, decision);
                         records_M[i++] = record_M;
                 }
                 file_M.close();
@@ -129,7 +139,8 @@ int main(){
                 cout << "5. Print List of Bidders with Usage Density at a particular circle (Not Allowed to Bid)" << endl;
                 cout << "6. Print Report of Decisions on Spectrum Requests" << endl;
                 cout << "7. Print Revenue Report" << endl;
-                cout << "8. Exit" << endl;
+                cout << "8. Print Login Credentials for LTO & MVNOs" << endl;
+                cout << "9. Exit" << endl;
                 // cout << "Enter your choice: ";
                 choice = Get_Valid_Choice(start, stop);
 
@@ -173,7 +184,7 @@ int main(){
                         cout << "Printing 'MVNO Spectrum' Data" << endl;
                         cout << "-------------------------------" << endl;
                         for (int i = 0; i < MAX_RECORDS_M; i++) {
-                                cout << i <<" "<< records_M[i].getDate() << " " << records_M[i].getMVNOCompany() << " " << records_M[i].getLocation() << " " << records_M[i].getRequest() << endl;
+                                cout << i <<" "<< records_M[i].getDate() << " " << records_M[i].getMVNOCompany() << " " << records_M[i].getLocation() << " " << records_M[i].getRequest() << " " << records_M[i].getLTOperator() << " " << records_M[i].getHashcode() << " " << records_M[i].getDecision() << endl;
                         }
                         cout << "-------------------------------" << endl;
                         cout << "-------------------------------" << endl;
@@ -209,6 +220,13 @@ int main(){
                         }
                 
                 case 8: {
+                        cout << "-------------------------------" << endl;
+                        cout << "Printing Login Credentials for LTO & MVNOs" << endl;
+                        cout << "-------------------------------" << endl;
+                        Print_Login_Credentials();
+                        break;
+                        }
+                case 9: {
                         cout << "Exiting..." << endl;
                         Exit_Protocol();
                         break;
