@@ -20,3 +20,5 @@ Command to run the optimized program
 
 .\optimize\operators_optimized.exe
 ```
+
+Note: 'Login_Credentials.csv' has been additionally added. You may choose to generate your own file.
