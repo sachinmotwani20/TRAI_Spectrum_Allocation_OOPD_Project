@@ -654,11 +654,6 @@ bool Check_Valid_Spectrum_Range (string LTOperator, string Spectrum_Range, strin
 
         //Remove ' MHz' from the end of "spectrum_range"
         spectrum_range = spectrum_range.substr(0, spectrum_range.size() - 4);
-
-        cout << "In file: " << spectrum_range<<endl;
-        cout << "In function: " << Spectrum_Range << endl;
-
-
         if (company == LTOperator && spectrum_range == Spectrum_Range) {
             return true;
         }
